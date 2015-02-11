@@ -55,6 +55,7 @@ module Sensu
       end
 
       def add_point(points, metric, point)
+        return points unless metric
         points[metric] = [] unless points[metric]
         points[metric] << point
         points
@@ -73,18 +74,21 @@ module Sensu
         @logger.error "InfluxDB: #{output}"
       end
 
+      def write_points(series, points)
+        @logger.debug("InfluxDB: Writing points for metrics - #{points.keys}")
+        points.each do |metric, metric_points|
+          @influxdb.write_point("#{series}.#{metric}", metric_points, true)
+        end
+      rescue => e
+        @logger.error("InfluxDB: Error posting event - #{e.backtrace}")
+      end
+
       def run(event)
         series, output = parse_event(event)
 
         points = parse_output_lines(output)
 
-        begin
-          points.each do |metric, metric_points|
-            @influxdb.write_point("#{series}.#{metric}", metric_points, true)
-          end
-        rescue => e
-          @logger.error("InfluxDB: Error posting event - #{e.backtrace}")
-        end
+        write_points(series, points)
 
         yield('InfluxDB: Handler finished', 0)
       end
