@@ -34,7 +34,8 @@ module Sensu
           event['check']['output']
         ]
       rescue => e
-        @logger.error "InfluxDB: Error setting up event object - #{e.backtrace}"
+        @logger.error 'InfluxDB: Error setting up event object '\
+          "- #{e} - #{e.backtrace}"
       end
 
       def strip_metric(metric)
@@ -55,14 +56,14 @@ module Sensu
       end
 
       def add_point(points, metric, point)
-        return points unless metric
+        return points if metric.strip.empty?
         points[metric] = [] unless points[metric]
         points[metric] << point
         points
       end
 
       def parse_output_lines(output)
-        points = []
+        points = {}
         output.split(/\n/).each do |line|
           @logger.debug("Parsing line: #{line}")
           m, v, t = split_line(line)
@@ -70,8 +71,8 @@ module Sensu
         end
         points
       rescue => e
-        @logger.error "InfluxDB: Error parsing output lines - #{e.backtrace}"
-        @logger.error "InfluxDB: #{output}"
+        @logger.error 'InfluxDB: Error parsing output lines - ' \
+          "#{e} - #{e.backtrace}\nOutput: #{output}"
       end
 
       def write_points(series, points)
@@ -80,7 +81,7 @@ module Sensu
           @influxdb.write_point("#{series}.#{metric}", metric_points, true)
         end
       rescue => e
-        @logger.error("InfluxDB: Error posting event - #{e.backtrace}")
+        @logger.error("InfluxDB: Error posting event - #{e} - #{e.backtrace}")
       end
 
       def run(event)
