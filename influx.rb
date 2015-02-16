@@ -31,7 +31,8 @@ module Sensu
         event = JSON.parse(event)
         [
           "#{event['check']['name']}.#{event['client']['name']}",
-          event['check']['output']
+          event['check']['output'],
+          event['check']['status']
         ]
       rescue => e
         @logger.error 'InfluxDB: Error setting up event object '\
@@ -85,7 +86,13 @@ module Sensu
       end
 
       def run(event)
-        series, output = parse_event(event)
+        series, output, status = parse_event(event)
+
+        if status != 0
+          @logger.error("InfluxDB: #{series} failed with status code: " \
+            "#{status}")
+          return
+        end
 
         points = parse_output_lines(output)
 
